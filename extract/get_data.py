@@ -49,7 +49,7 @@ def coletar_acoes() -> list[dict]:
                 "ticker": ticker,
                 "mercado": "B3",
                 "preco": round(preco_atual, 2) if preco_atual else None,
-                "Abertura": round(preco_aber,2) if preco_aber else None,
+                "abertura": round(preco_aber,2) if preco_aber else None,
                 "maxima": round(preco_max,2) if preco_max else None,
                 "minima": round(preco_min, 2) if preco_min else None,
                 "variacao_pct": variacao_pct,
@@ -66,4 +66,5 @@ def coletar_acoes() -> list[dict]:
 
 if __name__=="__main__":
     resultado = coletar_acoes()
-    print(resultado)
+    for r in resultado:
+        print(r)
