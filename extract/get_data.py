@@ -6,6 +6,12 @@ import time
 import json
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
+
 
 ATIVOS_BR = [
     "PETR4.SA", "VALE3.SA", "ITUB4.SA", "BBDC4.SA", "WEGE3.SA", "MGLU3.SA"
@@ -17,7 +23,6 @@ CRIPTO = [
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
-
 
 def coletar_acoes() -> list[dict]:
     registros = []
