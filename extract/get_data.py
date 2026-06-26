@@ -64,7 +64,69 @@ def coletar_acoes() -> list[dict]:
     return registros 
 
 
-if __name__=="__main__":
-    resultado = coletar_acoes()
-    for r in resultado:
-        print(r)
+def coletar_cripto() -> list[dict]:
+    registros = []
+    timestamp = datetime.utcnow().isoformat()
+
+    ids = ",".join(CRIPTO)
+    url = "https://api.coingecko.com/api/v3/simple/price"
+    params = {
+        "ids": ids,
+        "vs_currencies": "usd,brl",
+        "include_24hr_change": "true",
+        "include_24hr_vol": "true",
+        "include_market_cap": "true"
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        dados = resp.json()
+    
+        for moeda, valores in dados.items():
+            registros.append({
+            "event_type":   "cotacao",
+            "source":       "coingecko",
+            "collected_at": timestamp,
+            "ticker":       moeda.upper(),
+            "mercado":      "CRIPTO",
+            "preco_usd":    valores.get("usd"),
+            "preco_brl":    valores.get("brl"),
+            "variacao_pct": round(valores.get("usd_24h_change", 0), 2),
+            "volume_24h":   valores.get("usd_24h_vol"),
+            "market_cap":   valores.get("usd_market_cap")
+            })
+            print(f"Coletado: {moeda.upper()} - $ {valores.get('usd'):,.2f} - Variação: {valores.get('usd_24h_change', 0):.2f}%")
+
+    except Exception as e:
+        print(f"Erro ao coletar dados de criptomoedas: {e}")
+    
+    return registros
+
+def save_data(registros: list[dict], name_base:str):
+    if not registros:
+        print(f"No data to save in {name_base}.")
+        return
+    
+
+    hoje = datetime.utcnow().strftime("%Y-%m-%d")
+    filedir = DATA_DIR / f"{name_base}_{hoje}.csv"
+    df = pd.DataFrame(registros)
+    header = not filedir.exists()
+
+    df.to_csv(filedir, mode='a', header=header, index=False)
+
+def exec_get():
+    acoes = coletar_acoes()
+    save_data(acoes, "cotacoes_acoes")
+
+    cripto = coletar_cripto()
+    save_data(cripto, "cotacoes_cripto")
+
+if __name__ == "__main__":
+    exec_get()
+    schedule.every(5).minutes.do(exec_get)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
