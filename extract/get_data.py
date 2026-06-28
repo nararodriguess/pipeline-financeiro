@@ -13,6 +13,7 @@ load_dotenv()
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
 
 
+
 ATIVOS_BR = [
     "PETR4.SA", "VALE3.SA", "ITUB4.SA", "BBDC4.SA", "WEGE3.SA", "MGLU3.SA"
 ]
@@ -108,6 +109,48 @@ def coletar_cripto() -> list[dict]:
     
     return registros
 
+
+def coletar_noticias() -> list[dict]:
+    registros = []
+    timestamp = datetime.utcnow().isoformat()
+
+    if not NEWSAPI_KEY:
+        print("NEWSAPI_KEY not found.")
+        return []
+    
+    url = "https://newsapi.org/v2/everything"
+    params = {
+        "apiKey":   NEWSAPI_KEY,
+        "q":        "mercado financeiro OR bolsa OR dólar OR cripto",
+        "language": "pt",
+        "pageSize": 10,
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        dados = resp.json().get("articles", [])
+
+        for artigo in dados:
+            registros.append({
+                "event_type":   "noticia",
+                "source":       "newsapi",
+                "collected_at": timestamp,
+                "titulo":       artigo.get("title"),
+                "descricao":    artigo.get("description"),
+                "url":          artigo.get("url"),
+                "publicado_em": artigo.get("publishedAt"),
+                "fonte":        artigo.get("source", {}).get("name"),
+                "sentimento": None
+            })
+        print (f"{len(dados)} noticias coletadas")
+
+    except Exception as e:
+        print(f"Erro ao coletar notícias: {e}")
+        
+
+    return registros
+
 def save_data(registros: list[dict], name_base:str):
     if not registros:
         print(f"No data to save in {name_base}.")
@@ -121,16 +164,20 @@ def save_data(registros: list[dict], name_base:str):
 
     df.to_csv(filedir, mode='a', header=header, index=False)
 
+
 def exec_get():
     acoes = coletar_acoes()
     save_data(acoes, "cotacoes_acoes")
 
     cripto = coletar_cripto()
     save_data(cripto, "cotacoes_cripto")
+    
+    noticias = coletar_noticias()
+    save_data(noticias, "noticias")
 
 if __name__ == "__main__":
     exec_get()
-    schedule.every(5).minutes.do(exec_get)
+    schedule.every(1).hours.do(exec_get)
 
     while True:
         schedule.run_pending()
